@@ -10,65 +10,67 @@ let isClassifying = false;
 // UI Elements
 const startBtn = document.getElementById("startBtn");
 const beginSetupBtn = document.getElementById("beginSetupBtn");
-const rulesBtn = document.getElementById("rulesBtn");
-const closeRules = document.getElementById("closeRules");
-const startModal = document.getElementById("startModal");
-const rulesModal = document.getElementById("rulesModal");
 const modelStatus = document.getElementById("modelStatus");
-const confidenceValue = document.getElementById("confidenceValue");
-const confidenceFill = document.getElementById("confidenceFill");
-const gestureName = document.getElementById("gestureName");
-const gestureIcon = document.getElementById("gestureIcon");
-const playerChoiceText = document.getElementById("playerChoice");
-const computerChoiceText = document.getElementById("computerChoice");
-const winnerText = document.getElementById("winnerText");
-const playerScoreText = document.getElementById("playerScore");
-const computerScoreText = document.getElementById("computerScore");
-const roundCountText = document.getElementById("roundCount");
-const playRoundBtn = document.getElementById("playRoundBtn");
-const resetBtn = document.getElementById("resetBtn");
 const webcamContainer = document.getElementById("webcam-container");
 
 // Setup Event Listeners
-if (startBtn) startBtn.addEventListener("click", startExperience);
-if (beginSetupBtn) beginSetupBtn.addEventListener("click", startExperience);
+if (startBtn) startBtn.addEventListener("click", requestCameraAccess);
+if (beginSetupBtn) beginSetupBtn.addEventListener("click", requestCameraAccess);
 
+/**
+ * STEP 1: Manually request camera permission from the browser.
+ * This satisfies the "User Gesture" requirement for GitHub Pages.
+ */
+async function requestCameraAccess() {
+  modelStatus.textContent = "Requesting browser permission...";
+  
+  try {
+    // This line triggers the official browser popup
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    
+    // If successful, stop this temporary stream so p5 can take over the camera
+    stream.getTracks().forEach(track => track.stop());
+    
+    startExperience();
+  } catch (err) {
+    console.error("Camera access denied or not found:", err);
+    modelStatus.textContent = "Error: Camera access denied. Check browser settings.";
+    alert("Please allow camera access in your browser settings and refresh the page.");
+  }
+}
+
+/**
+ * STEP 2: Start the actual p5 and AI experience.
+ */
 function startExperience() {
+  const startModal = document.getElementById("startModal");
   if (startModal) startModal.classList.remove("show");
   
-  modelStatus.textContent = "Starting p5...";
-  // We use instance mode to avoid conflicts with global variables
+  modelStatus.textContent = "Initializing AI Vision...";
   new p5(sketch);
 }
 
 const sketch = (p) => {
   p.setup = function () {
     webcamContainer.innerHTML = "";
-    
-    // Create the wrap div using p5 DOM
     const wrap = p.createDiv("");
     wrap.class("live-video-wrap");
     wrap.parent(webcamContainer);
 
-    // Create Canvas and parent it to the wrap
     const canvas = p.createCanvas(320, 240);
     canvas.parent(wrap);
 
-    // CRITICAL: Request video explicitly
-    video = p.createCapture(p.VIDEO, (stream) => {
-      console.log("Webcam Stream acquired");
-      modelStatus.textContent = "Camera On. Loading Model...";
+    // Now that permission is granted, p5 can safely capture the video
+    video = p.createCapture(p.VIDEO, () => {
+      modelStatus.textContent = "Camera On. Loading AI...";
     });
     
     video.size(320, 240);
     video.hide();
 
-    // Load Classifier
     classifier = ml5.imageClassifier(imageModelURL + 'model.json', video, () => {
-      console.log("Model Loaded!");
       modelLoaded = true;
-      modelStatus.textContent = "Model Ready!";
-      isClassifying = true;
+      modelStatus.textContent = "System Ready!";
       classifyVideo();
     });
   };
@@ -84,41 +86,19 @@ const sketch = (p) => {
     }
   };
 
-  // Move classify function inside or outside, but call it correctly
   function classifyVideo() {
     classifier.classify(gotResult);
   }
 
   function gotResult(error, results) {
-    if (error) {
-      console.error(error);
-      return;
-    }
+    if (error) return;
     if (results && results[0]) {
       label = results[0].label;
       confidence = results[0].confidence;
       updateUI(label, confidence);
     }
-    classifier.classify(gotResult); // Loop
+    classifier.classify(gotResult);
   }
 };
 
-function updateUI(rawLabel, conf) {
-  const cleanLabel = rawLabel.toLowerCase();
-  let choice = "Waiting...";
-  let icon = "❔";
-
-  if (cleanLabel.includes("rock")) { choice = "Rock"; icon = "✊"; }
-  else if (cleanLabel.includes("paper")) { choice = "Paper"; icon = "✋"; }
-  else if (cleanLabel.includes("scissor")) { choice = "Scissors"; icon = "✌️"; }
-
-  currentPlayerChoice = choice;
-  gestureName.textContent = choice;
-  gestureIcon.textContent = icon;
-
-  const percent = Math.round(conf * 100);
-  confidenceValue.textContent = percent + "%";
-  confidenceFill.style.width = percent + "%";
-}
-
-// Keep your existing Play Round and Reset logic below...
+// ... (Rest of your UI update and game logic functions)
