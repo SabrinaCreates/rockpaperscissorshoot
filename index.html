@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rock, Paper, Scissors, Shoot!</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="background-glow glow-1"></div>
+  <div class="background-glow glow-2"></div>
+
+  <div class="game-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">AI VISION GAME</p>
+        <h1>Rock, Paper, Scissors, Shoot!</h1>
+        <p class="subtitle">
+          Train your model, show your hand, and battle the computer in real time.
+        </p>
+      </div>
+
+      <div class="topbar-buttons">
+        <button id="rulesBtn" class="ghost-btn" type="button">Rules</button>
+        <button id="startBtn" class="primary-btn" type="button">Start Camera</button>
+      </div>
+    </header>
+
+    <main class="dashboard">
+      <section class="camera-section panel">
+        <div class="panel-header">
+          <h2>Live Camera Detection</h2>
+          <span class="status-pill" id="modelStatus">Model not started</span>
+        </div>
+
+        <div class="camera-frame">
+          <div id="webcam-container" class="camera-placeholder">
+            <div class="scan-ring"></div>
+            <div class="camera-icon">📷</div>
+            <h3>Camera Feed Area</h3>
+            <p>Your Teachable Machine webcam preview will appear here.</p>
+          </div>
+        </div>
+
+        <div class="confidence-box">
+          <div class="confidence-header">
+            <span>Prediction Confidence</span>
+            <span id="confidenceValue">0%</span>
+          </div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" id="confidenceFill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <section class="panel score-panel">
+          <div class="panel-header">
+            <h2>Scoreboard</h2>
+          </div>
+
+          <div class="score-grid">
+            <div class="score-card">
+              <p>Player</p>
+              <h3 id="playerScore">0</h3>
+            </div>
+            <div class="score-card">
+              <p>Computer</p>
+              <h3 id="computerScore">0</h3>
+            </div>
+            <div class="score-card">
+              <p>Rounds</p>
+              <h3 id="roundCount">0</h3>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel choices-panel">
+          <div class="panel-header">
+            <h2>Battle Results</h2>
+          </div>
+
+          <div class="choice-stack">
+            <div class="choice-card">
+              <p class="label">Your Choice</p>
+              <div class="choice-value" id="playerChoice">—</div>
+            </div>
+
+            <div class="choice-card">
+              <p class="label">Computer Choice</p>
+              <div class="choice-value" id="computerChoice">—</div>
+            </div>
+
+            <div class="winner-box">
+              <p class="label">Winner</p>
+              <div class="winner-text" id="winnerText">No round played yet</div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <section class="bottom-row">
+      <div class="panel action-panel">
+        <div class="panel-header">
+          <h2>Game Controls</h2>
+        </div>
+
+        <div class="control-buttons">
+          <button id="playRoundBtn" class="primary-btn" type="button">Play Round</button>
+          <button id="resetBtn" class="ghost-btn" type="button">Reset Score</button>
+        </div>
+      </div>
+
+      <div class="panel detected-panel">
+        <div class="panel-header">
+          <h2>Detected Gesture</h2>
+        </div>
+
+        <div class="gesture-display">
+          <span class="gesture-icon" id="gestureIcon">❔</span>
+          <div>
+            <p class="label">Current Gesture</p>
+            <h3 id="gestureName">Waiting...</h3>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Rules Modal -->
+  <div class="modal-overlay" id="rulesModal">
+    <div class="modal-card">
+      <button id="closeRules" class="close-btn" type="button">&times;</button>
+      <p class="eyebrow">HOW TO PLAY</p>
+      <h2>Game Rules</h2>
+      <ul>
+        <li>Rock beats Scissors</li>
+        <li>Scissors beats Paper</li>
+        <li>Paper beats Rock</li>
+        <li>Show your hand gesture clearly in the webcam</li>
+        <li>Click Play Round once your gesture is detected</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Welcome Modal -->
+  <div class="modal-overlay show" id="startModal">
+    <div class="modal-card">
+      <p class="eyebrow">WELCOME</p>
+      <h2>Ready to play?</h2>
+      <p>
+        This futuristic Rock, Paper, Scissors game uses computer vision to read
+        your hand gesture live through your webcam.
+      </p>
+      <button id="beginSetupBtn" class="primary-btn" type="button">Begin Setup</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/p5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/addons/p5.dom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ml5@latest/dist/ml5.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
