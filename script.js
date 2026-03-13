@@ -21,6 +21,7 @@ const playerChoiceText = document.getElementById("playerChoice");
 const computerChoiceText = document.getElementById("computerChoice");
 const winnerText = document.getElementById("winnerText");
 const playRoundBtn = document.getElementById("playRoundBtn");
+const resetBtn = document.getElementById("resetBtn");
 
 // Event Listeners
 if (startBtn) startBtn.addEventListener("click", requestCameraAccess);
@@ -28,16 +29,19 @@ if (beginSetupBtn) beginSetupBtn.addEventListener("click", requestCameraAccess);
 
 /**
  * STEP 1: Secure Camera Access
+ * satisfy browser "User Gesture" requirements for GitHub Pages
  */
 async function requestCameraAccess() {
   modelStatus.textContent = "Requesting browser permission...";
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    // Stop temporary stream so p5 can take over the hardware
     stream.getTracks().forEach(track => track.stop());
     startExperience();
   } catch (err) {
+    console.error("Camera access denied:", err);
     modelStatus.textContent = "Error: Camera access denied.";
-    alert("Please allow camera access to play!");
+    alert("Please allow camera access in your browser settings to play!");
   }
 }
 
@@ -67,6 +71,7 @@ const sketch = (p) => {
     video.size(320, 240);
     video.hide();
 
+    // Load Teachable Machine Model
     classifier = ml5.imageClassifier(imageModelURL + 'model.json', video, () => {
       modelLoaded = true;
       modelStatus.textContent = "System Ready!";
@@ -78,6 +83,7 @@ const sketch = (p) => {
     p.background(0);
     if (video) {
       p.push();
+      // Mirror the feed for a natural user experience
       p.translate(p.width, 0);
       p.scale(-1, 1);
       p.image(video, 0, 0, 320, 240);
@@ -101,7 +107,7 @@ const sketch = (p) => {
 };
 
 /**
- * STEP 3: Game Logic (The Back-and-Forth)
+ * STEP 3: Detection & Game Logic
  */
 function updateDetectionUI(rawLabel, conf) {
   const cleanLabel = rawLabel.toLowerCase();
@@ -121,69 +127,87 @@ function updateDetectionUI(rawLabel, conf) {
   document.getElementById("confidenceFill").style.width = percent + "%";
 }
 
+// Turn-Based Battle Logic
 if (playRoundBtn) {
   playRoundBtn.addEventListener("click", function () {
-    if (!modelLoaded) return;
+    if (!modelLoaded || playRoundBtn.disabled) return;
 
-    // Reset UI for new round
-    winnerText.textContent = "3... 2... 1...";
+    // Start Countdown
     playRoundBtn.disabled = true;
+    winnerText.classList.add("active");
+    let count = 3;
 
-    // Simulate a countdown/turn delay
-    setTimeout(() => {
-      winnerText.textContent = "SHOOT!";
-      
-      // Get the capture at the moment of "Shoot"
-      const finalPlayerChoice = currentPlayerChoice;
-      const choices = ["Rock", "Paper", "Scissors"];
-      const finalComputerChoice = choices[Math.floor(Math.random() * 3)];
-
-      if (finalPlayerChoice === "Waiting...") {
-        winnerText.textContent = "No hand detected! Try again.";
-        playRoundBtn.disabled = false;
-        return;
-      }
-
-      // Determine Winner
-      let result = "";
-      if (finalPlayerChoice === finalComputerChoice) {
-        result = "It's a Tie!";
-      } else if (
-        (finalPlayerChoice === "Rock" && finalComputerChoice === "Scissors") ||
-        (finalPlayerChoice === "Paper" && finalComputerChoice === "Rock") ||
-        (finalPlayerChoice === "Scissors" && finalComputerChoice === "Paper")
-      ) {
-        result = "You Win!";
-        playerScore++;
+    const countdownInterval = setInterval(() => {
+      if (count > 0) {
+        winnerText.textContent = count + "...";
+        count--;
       } else {
-        result = "Computer Wins!";
-        computerScore++;
+        clearInterval(countdownInterval);
+        executeBattle();
       }
-
-      // Update UI
-      roundCount++;
-      document.getElementById("roundCount").textContent = roundCount;
-      document.getElementById("playerScore").textContent = playerScore;
-      document.getElementById("computerScore").textContent = computerScore;
-      
-      playerChoiceText.textContent = finalPlayerChoice;
-      computerChoiceText.textContent = finalComputerChoice;
-      winnerText.textContent = result;
-      
-      playRoundBtn.disabled = false;
-    }, 2000); // 2-second delay for the "turn"
+    }, 600);
   });
 }
 
+function executeBattle() {
+  winnerText.textContent = "SHOOT!";
+  
+  const finalPlayerChoice = currentPlayerChoice;
+  const choices = ["Rock", "Paper", "Scissors"];
+  const finalComputerChoice = choices[Math.floor(Math.random() * 3)];
+
+  if (finalPlayerChoice === "Waiting...") {
+    winnerText.textContent = "No hand detected!";
+    setTimeout(() => {
+        playRoundBtn.disabled = false;
+        winnerText.classList.remove("active");
+    }, 1000);
+    return;
+  }
+
+  let result = "";
+  if (finalPlayerChoice === finalComputerChoice) {
+    result = "It's a Tie!";
+  } else if (
+    (finalPlayerChoice === "Rock" && finalComputerChoice === "Scissors") ||
+    (finalPlayerChoice === "Paper" && finalComputerChoice === "Rock") ||
+    (finalPlayerChoice === "Scissors" && finalComputerChoice === "Paper")
+  ) {
+    result = "You Win!";
+    playerScore++;
+  } else {
+    result = "Computer Wins!";
+    computerScore++;
+  }
+
+  // Update Stats & UI
+  roundCount++;
+  document.getElementById("roundCount").textContent = roundCount;
+  document.getElementById("playerScore").textContent = playerScore;
+  document.getElementById("computerScore").textContent = computerScore;
+  
+  playerChoiceText.textContent = finalPlayerChoice;
+  computerChoiceText.textContent = finalComputerChoice;
+  winnerText.textContent = result;
+  
+  // Reset for next turn after a pause
+  setTimeout(() => {
+    playRoundBtn.disabled = false;
+    winnerText.classList.remove("active");
+  }, 1500);
+}
+
 // Reset Score Logic
-document.getElementById("resetBtn").addEventListener("click", () => {
-  playerScore = 0;
-  computerScore = 0;
-  roundCount = 0;
-  document.getElementById("playerScore").textContent = "0";
-  document.getElementById("computerScore").textContent = "0";
-  document.getElementById("roundCount").textContent = "0";
-  playerChoiceText.textContent = "—";
-  computerChoiceText.textContent = "—";
-  winnerText.textContent = "Ready for a new game!";
-});
+if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      playerScore = 0;
+      computerScore = 0;
+      roundCount = 0;
+      document.getElementById("playerScore").textContent = "0";
+      document.getElementById("computerScore").textContent = "0";
+      document.getElementById("roundCount").textContent = "0";
+      playerChoiceText.textContent = "—";
+      computerChoiceText.textContent = "—";
+      winnerText.textContent = "No round played yet";
+    });
+}
