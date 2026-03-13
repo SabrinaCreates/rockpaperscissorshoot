@@ -1,4 +1,5 @@
 let classifier;
+// Ensure your URL ends with the final slash /
 const imageModelURL = "https://teachablemachine.withgoogle.com/models/QV_CtTl_G/";
 
 let video;
@@ -29,13 +30,11 @@ if (beginSetupBtn) beginSetupBtn.addEventListener("click", requestCameraAccess);
 
 /**
  * STEP 1: Secure Camera Access
- * satisfy browser "User Gesture" requirements for GitHub Pages
  */
 async function requestCameraAccess() {
   modelStatus.textContent = "Requesting browser permission...";
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    // Stop temporary stream so p5 can take over the hardware
     stream.getTracks().forEach(track => track.stop());
     startExperience();
   } catch (err) {
@@ -66,13 +65,20 @@ const sketch = (p) => {
     canvas.parent(wrap);
 
     video = p.createCapture(p.VIDEO, () => {
-      modelStatus.textContent = "Camera On. Loading Model...";
+      console.log("Camera successfully captured");
+      modelStatus.textContent = "Camera active. Loading AI Model...";
     });
     video.size(320, 240);
     video.hide();
 
-    // Load Teachable Machine Model
-    classifier = ml5.imageClassifier(imageModelURL + 'model.json', video, () => {
+    // Load Model with a timeout/error check
+    classifier = ml5.imageClassifier(imageModelURL + 'model.json', video, (err) => {
+      if (err) {
+        console.error("Model failed to load:", err);
+        modelStatus.textContent = "Error: Model failed to load.";
+        return;
+      }
+      console.log("Model loaded successfully!");
       modelLoaded = true;
       modelStatus.textContent = "System Ready!";
       classifyVideo();
@@ -83,7 +89,6 @@ const sketch = (p) => {
     p.background(0);
     if (video) {
       p.push();
-      // Mirror the feed for a natural user experience
       p.translate(p.width, 0);
       p.scale(-1, 1);
       p.image(video, 0, 0, 320, 240);
@@ -92,22 +97,27 @@ const sketch = (p) => {
   };
 
   function classifyVideo() {
-    classifier.classify(gotResult);
+    if (modelLoaded) {
+      classifier.classify(gotResult);
+    }
   }
 
   function gotResult(error, results) {
-    if (error) return;
+    if (error) {
+      console.error(error);
+      return;
+    }
     if (results && results[0]) {
       label = results[0].label;
       confidence = results[0].confidence;
       updateDetectionUI(label, confidence);
     }
-    classifier.classify(gotResult);
+    classifier.classify(gotResult); // Recursive loop for live detection
   }
 };
 
 /**
- * STEP 3: Detection & Game Logic
+ * STEP 3: Detection & Game UI Updates
  */
 function updateDetectionUI(rawLabel, conf) {
   const cleanLabel = rawLabel.toLowerCase();
@@ -127,12 +137,11 @@ function updateDetectionUI(rawLabel, conf) {
   document.getElementById("confidenceFill").style.width = percent + "%";
 }
 
-// Turn-Based Battle Logic
+// Turn-Based Battle Logic with 3-2-1 Countdown
 if (playRoundBtn) {
   playRoundBtn.addEventListener("click", function () {
     if (!modelLoaded || playRoundBtn.disabled) return;
 
-    // Start Countdown
     playRoundBtn.disabled = true;
     winnerText.classList.add("active");
     let count = 3;
@@ -180,7 +189,6 @@ function executeBattle() {
     computerScore++;
   }
 
-  // Update Stats & UI
   roundCount++;
   document.getElementById("roundCount").textContent = roundCount;
   document.getElementById("playerScore").textContent = playerScore;
@@ -190,7 +198,6 @@ function executeBattle() {
   computerChoiceText.textContent = finalComputerChoice;
   winnerText.textContent = result;
   
-  // Reset for next turn after a pause
   setTimeout(() => {
     playRoundBtn.disabled = false;
     winnerText.classList.remove("active");
